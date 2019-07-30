@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
 
+// importing models
 const Course = require('./models').Course;
 const User = require('./models').User;
 
-
-// TODO setup your api routes here
 
 // GET request to 'api/users' that returns all users
 router.get('/users', (req, res) => {
@@ -67,6 +66,7 @@ router.post('/courses', (req, res) => {
 
 
 // PUT request to '/api/courses/:id' to update a single course
+// This is still a working in progress, not sure if it works
 router.put('/courses/:id', (req, res) => {
   Course.update({
     where: {
