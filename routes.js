@@ -97,7 +97,13 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
       }
     ]
   });
-  res.status(200).json(course);
+  // if/else on if a course is found (which means :id doesn't exists)
+  if(course.length !== 0) {
+    res.status(200).json(course);
+  }else{
+    res.status(404).json({message: "Course not found!"});
+  }
+
 }));
 
 // POST request to '/api/courses' that creates a new course
@@ -143,19 +149,28 @@ router.put('/courses/:id', [
   }else{
 
     // TO DO: error when PUT on non existing :id
-    
-    const course = await Course.update(
-      {
-        title: req.body.title,
-        description: req.body.description,
-      },
-      {
-        where: {
-          id: req.params.id
-        }
-      }
-    );
-    res.status(204).end();
+    const course = await Course.findByPk(req.params.id);
+
+    if(course) {
+      course.title = req.body.title;
+      course.description = req.body.description;
+      await course.save();
+      res.status(204).end();
+    }else{
+      res.status(404).json({message: "Course not found!"});
+    }
+    // const course = await Course.update(
+    //   {
+    //     title: req.body.title,
+    //     description: req.body.description,
+    //   },
+    //   {
+    //     where: {
+    //       id: req.params.id
+    //     }
+    //   }
+    // );
+    // res.status(204).end();
   }
 }));
 
