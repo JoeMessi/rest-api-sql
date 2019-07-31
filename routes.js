@@ -2,12 +2,43 @@ const express = require('express');
 const router = express.Router();
 // a simple package for handling exceptions inside of async express routes
 // and passing them to your express error handlers
-const asyncHandler = require('express-async-handler');
+// const asyncHandler = require('express-async-handler');
+// express-validator library
+const { check, validationResult } = require('express-validator');
 
 
 // importing models
 const Course = require('./models').Course;
 const User = require('./models').User;
+
+// helper func
+function asyncHandler(cb){
+  return async (req, res, next)=>{
+    try {
+      await cb(req,res, next);
+    } catch(err){
+      next(err); // error will be sent to the error handler middleware
+    }
+  };
+}
+
+// validation for user
+const firstNameValChain = check('firstName')
+  .exists({ checkNull: true, checkFalsy: true })
+  .withMessage('firstName required');
+
+const lastNameValChain = check('lastName')
+  .exists({ checkNull: true, checkFalsy: true })
+  .withMessage('lastName required');
+
+const emailValChain = check('emailAddress')
+  .exists({ checkNull: true, checkFalsy: true })
+  .withMessage('emailAddress required');
+
+const passwordValChain = check('password')
+  .exists({ checkNull: true, checkFalsy: true })
+  .withMessage('password required');
+
 
 
 // GET request to 'api/users' that returns all users
@@ -23,10 +54,31 @@ router.get('/users', asyncHandler( async (req, res) => {
   res.status(200).json(users);
 }));
 
+
 // POST request to 'api/users' that creates a new user
-router.post('/users', asyncHandler( async (req, res) => {
-   const user = await User.create(req.body);
-   res.location('/').status(201).end();
+router.post('/users', [
+
+  firstNameValChain,
+  lastNameValChain,
+  emailValChain,
+  passwordValChain
+
+], asyncHandler( async (req, res) => {
+  // attempt to get the validation result from the Request object.
+  const errors = validationResult(req);
+  // If there are validation errors...
+  if(!errors.isEmpty()) {
+    // use the Array `map()` method to get a list of error messages.
+    const errorMessages = errors.array().map(error => error.msg);
+    // return the validation errors to the client.
+    res.status(400).json({ errors: errorMessages });
+
+  }else{
+
+    const user = await User.create(req.body);
+    res.location('/').status(201).end();
+  }
+
 }));
 
 
