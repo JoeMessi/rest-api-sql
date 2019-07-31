@@ -126,19 +126,37 @@ router.post('/courses', [
 
 // PUT request to '/api/courses/:id' to update a single course
 // This is still a working in progress, not sure if it works
-router.put('/courses/:id', asyncHandler( async (req, res) => {
-  const course = await Course.update(
-    {
-      title: req.body.title,
-      description: req.body.description,
-    },
-    {
-      where: {
-        id: req.params.id
+router.put('/courses/:id', [
+  titleValChain,
+  descValChain
+
+], asyncHandler( async (req, res) => {
+  // attempt to get the validation result from the Request object.
+  const errors = validationResult(req);
+  // If there are validation errors...
+  if(!errors.isEmpty()) {
+    // use the Array `map()` method to get a list of error messages.
+    const errorMessages = errors.array().map(error => error.msg);
+    // return the validation errors to the client.
+    res.status(400).json({ errors: errorMessages });
+
+  }else{
+
+    // TO DO: error when PUT on non existing :id
+    
+    const course = await Course.update(
+      {
+        title: req.body.title,
+        description: req.body.description,
+      },
+      {
+        where: {
+          id: req.params.id
+        }
       }
-    }
-  );
-  res.status(204).end();
+    );
+    res.status(204).end();
+  }
 }));
 
 
