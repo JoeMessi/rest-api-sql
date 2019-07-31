@@ -1,43 +1,31 @@
 const express = require('express');
 const router = express.Router();
-// a simple package for handling exceptions inside of async express routes
-// and passing them to your express error handlers
-// const asyncHandler = require('express-async-handler');
-// express-validator library
-const { check, validationResult } = require('express-validator');
-
 
 // importing models
 const Course = require('./models').Course;
 const User = require('./models').User;
 
-// helper func
-function asyncHandler(cb){
-  return async (req, res, next)=>{
-    try {
-      await cb(req,res, next);
-    } catch(err){
-      next(err); // error will be sent to the error handler middleware
-    }
-  };
-}
+// package for handling exceptions inside of async express routes
+// and passing them to your express error handlers
+const asyncHandler = require('express-async-handler');
 
-// validation for user
-const firstNameValChain = check('firstName')
-  .exists({ checkNull: true, checkFalsy: true })
-  .withMessage('firstName required');
+// express-validator library
+const { validationResult } = require('express-validator');
 
-const lastNameValChain = check('lastName')
-  .exists({ checkNull: true, checkFalsy: true })
-  .withMessage('lastName required');
+// require the validation chains for the User module
+const {
+  firstNameValChain,
+  lastNameValChain,
+  emailValChain,
+  passwordValChain
+} = require('./validation-chains/userValChains');
 
-const emailValChain = check('emailAddress')
-  .exists({ checkNull: true, checkFalsy: true })
-  .withMessage('emailAddress required');
+// require the validation chains for the Course module
+const {
+  titleValChain,
+  descValChain
+} = require('./validation-chains/courseValChains');
 
-const passwordValChain = check('password')
-  .exists({ checkNull: true, checkFalsy: true })
-  .withMessage('password required');
 
 
 
@@ -113,10 +101,26 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
 }));
 
 // POST request to '/api/courses' that creates a new course
-router.post('/courses', asyncHandler( async (req, res) => {
-  const course = await Course.create(req.body);
-    // sets the Location header to the URI for the course
-  res.location('/').status(201).end();
+router.post('/courses', [
+  titleValChain,
+  descValChain
+
+], asyncHandler( async (req, res) => {
+
+  // attempt to get the validation result from the Request object.
+  const errors = validationResult(req);
+  // If there are validation errors...
+  if(!errors.isEmpty()) {
+    // use the Array `map()` method to get a list of error messages.
+    const errorMessages = errors.array().map(error => error.msg);
+    // return the validation errors to the client.
+    res.status(400).json({ errors: errorMessages });
+  }else{
+    const course = await Course.create(req.body);
+      // sets the Location header to the URI for the course
+    res.location('/').status(201).end();
+  }
+
 }));
 
 
