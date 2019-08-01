@@ -1,14 +1,21 @@
+ // require express
 const express = require('express');
+// starting an express router
 const router = express.Router();
-const Course = require('./models').Course; // importing Course model
-const User = require('./models').User; // importing User model
-// package for handling exceptions inside of async express routes
-// and passing them to your express error handlers
+// importing models
+const Course = require('./models').Course;
+const User = require('./models').User;
+// package/helper func that wraps a callback into a try/catch block
+// used on every route, we avoid writing try/catch for every single route
 const asyncHandler = require('express-async-handler');
-// validationResult from express-validator library
+// require validationResult from the express-validator library
 const { validationResult } = require('express-validator');
+// library that hashes passwords
+const bcryptjs = require('bcryptjs');
+// require the user authentication func
+const authenticateUser = require('./user-authentication/authenticateUser');
 
-// Validation Chains for the User module
+// importing validation chains for the User module
 const {
   firstNameValChain,
   lastNameValChain,
@@ -16,25 +23,15 @@ const {
   passwordValChain
 } = require('./validation-chains/userValChains');
 
-// Validation Chains for the Course module
+// importing validation chains for the Course module
 const {
   titleValChain,
   descValChain
 } = require('./validation-chains/courseValChains');
 
-// library that hashes passwords
-const bcryptjs = require('bcryptjs');
-// require my user authentication func
-const authenticateUser = require('./user-authentication/authenticateUser');
-
-
-
-
 
 // GET request to 'api/users' that returns all users
 router.get('/users', authenticateUser, asyncHandler( async (req, res) => {
-  // code to get and return the current user...
-  const currentUser = req.currentUser;
 
   const users = await User.findAll({
     include: [
@@ -137,12 +134,13 @@ router.post('/courses',
 
 
 // PUT request to '/api/courses/:id' to update a single course
-// This is still a working in progress, not sure if it works
 router.put('/courses/:id',
  authenticateUser,
  [ titleValChain, descValChain ],
 
  asyncHandler( async (req, res) => {
+  // code to get and return the current user...
+  const currentUser = req.currentUser;
   // attempt to get the validation result from the Request object.
   const errors = validationResult(req);
   // If there are validation errors...
@@ -154,7 +152,12 @@ router.put('/courses/:id',
 
   }else{
 
-    // TO DO: error when PUT on non existing :id
+   // check if user owns that course
+   console.log(currentUser[0].dataValues.id);
+   const userLoggedIn = await User.findByPk(currentUser[0].dataValues.id);
+   console.log(userLoggedIn.student);
+
+    // get course by it's :id
     const course = await Course.findByPk(req.params.id);
 
     if(course) {
@@ -165,18 +168,6 @@ router.put('/courses/:id',
     }else{
       res.status(404).json({message: "Course not found!"});
     }
-    // const course = await Course.update(
-    //   {
-    //     title: req.body.title,
-    //     description: req.body.description,
-    //   },
-    //   {
-    //     where: {
-    //       id: req.params.id
-    //     }
-    //   }
-    // );
-    // res.status(204).end();
   }
 }));
 
