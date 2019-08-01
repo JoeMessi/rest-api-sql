@@ -1,18 +1,14 @@
 const express = require('express');
 const router = express.Router();
-
-// importing models
-const Course = require('./models').Course;
-const User = require('./models').User;
-
+const Course = require('./models').Course; // importing Course model
+const User = require('./models').User; // importing User model
 // package for handling exceptions inside of async express routes
 // and passing them to your express error handlers
 const asyncHandler = require('express-async-handler');
-
-// express-validator library
+// validationResult from express-validator library
 const { validationResult } = require('express-validator');
 
-// require the validation chains for the User module
+// Validation Chains for the User module
 const {
   firstNameValChain,
   lastNameValChain,
@@ -20,17 +16,26 @@ const {
   passwordValChain
 } = require('./validation-chains/userValChains');
 
-// require the validation chains for the Course module
+// Validation Chains for the Course module
 const {
   titleValChain,
   descValChain
 } = require('./validation-chains/courseValChains');
 
+// library that hashes passwords
+const bcryptjs = require('bcryptjs');
+// require my user authentication func
+const authenticateUser = require('./user-authentication/authenticateUser');
+
+
 
 
 
 // GET request to 'api/users' that returns all users
-router.get('/users', asyncHandler( async (req, res) => {
+router.get('/users', authenticateUser, asyncHandler( async (req, res) => {
+  // code to get and return the current user...
+  const currentUser = req.currentUser;
+
   const users = await User.findAll({
     include: [
       {
@@ -62,7 +67,8 @@ router.post('/users', [
     res.status(400).json({ errors: errorMessages });
 
   }else{
-
+    // hasing password before creating new user
+    req.body.password = await bcryptjs.hashSync(req.body.password);
     const user = await User.create(req.body);
     res.location('/').status(201).end();
   }
@@ -107,11 +113,11 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
 }));
 
 // POST request to '/api/courses' that creates a new course
-router.post('/courses', [
-  titleValChain,
-  descValChain
+router.post('/courses',
+  authenticateUser,
+  [ titleValChain, descValChain ],
 
-], asyncHandler( async (req, res) => {
+  asyncHandler( async (req, res) => {
 
   // attempt to get the validation result from the Request object.
   const errors = validationResult(req);
@@ -132,11 +138,11 @@ router.post('/courses', [
 
 // PUT request to '/api/courses/:id' to update a single course
 // This is still a working in progress, not sure if it works
-router.put('/courses/:id', [
-  titleValChain,
-  descValChain
+router.put('/courses/:id',
+ authenticateUser,
+ [ titleValChain, descValChain ],
 
-], asyncHandler( async (req, res) => {
+ asyncHandler( async (req, res) => {
   // attempt to get the validation result from the Request object.
   const errors = validationResult(req);
   // If there are validation errors...
@@ -176,7 +182,7 @@ router.put('/courses/:id', [
 
 
 // DELETE request to '/api/courses/:id' to delete a single course
-router.delete('/courses/:id', asyncHandler( async (req, res) => {
+router.delete('/courses/:id', authenticateUser, asyncHandler( async (req, res) => {
   // throw new Error('noooooo')
   const course = await Course.destroy({
     where: {
