@@ -6,7 +6,6 @@ const morgan = require('morgan');
 const Sequelize = require('sequelize');
 const routes = require('./routes');
 
-
 // a Sequelize instance to connect to the database
 const sequelize = new Sequelize({
   dialect: 'sqlite',
@@ -39,7 +38,6 @@ app.use(express.json());
 // we want to have our API to have all endpoints starting with /api
 // this middleware says when a path starts with '/api' use the routes inside routes
 app.use('/api', routes);
-
 
 // send 404 if no other route matched
 app.use((req, res) => {

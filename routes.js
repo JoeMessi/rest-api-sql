@@ -12,8 +12,8 @@ const asyncHandler = require('express-async-handler');
 const { validationResult } = require('express-validator');
 // library that hashes passwords
 const bcryptjs = require('bcryptjs');
-// require the user authentication func
-const authenticateUser = require('./user-authentication/authenticateUser');
+// require the user authentication function
+const authenticateUser = require('./user-authentication/user-authentication');
 
 // importing validation chains for the User module
 const {
@@ -21,16 +21,16 @@ const {
   lastNameValChain,
   emailValChain,
   passwordValChain
-} = require('./validation-chains/userValChains');
+} = require('./validation-chains/user-validation-chain');
 
 // importing validation chains for the Course module
 const {
   titleValChain,
   descValChain
-} = require('./validation-chains/courseValChains');
+} = require('./validation-chains/course-validation-chain');
 
 
-// GET request to 'api/users' that returns all users
+// GET request to 'api/users' that returns all users - We also authenticate the user
 router.get('/users', authenticateUser, asyncHandler( async (req, res) => {
 
   const users = await User.findAll({
@@ -45,7 +45,9 @@ router.get('/users', authenticateUser, asyncHandler( async (req, res) => {
 }));
 
 
-// POST request to 'api/users' that creates a new user
+// POST request to 'api/users' that creates a new user -
+// notice we validate the properties before creating a new user,
+// by passing validation chains before the route middleware func is executed
 router.post('/users', [
 
   firstNameValChain,
@@ -104,7 +106,7 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
       }
     ]
   });
-  // if/else on if a course is found (which means :id doesn't exists)
+  // conditional on if a course is found
   if(course.length !== 0) {
     res.status(200).json(course);
   }else{
@@ -113,7 +115,8 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
 
 }));
 
-// POST request to '/api/courses' that creates a new course
+// POST request to '/api/courses' that creates a new course -
+// notice we authenticate the user and validate the properties of the new course
 router.post('/courses',
   authenticateUser,
   [ titleValChain, descValChain ],
@@ -133,11 +136,11 @@ router.post('/courses',
       // sets the Location header to the URI for the new course
     res.location(`/courses/${course.id}`).status(201).end();
   }
-
 }));
 
 
-// PUT request to '/api/courses/:id' to update a single course
+// PUT request to '/api/courses/:id' to update a single course -
+// notice we authenticate the user and validate the new properties
 router.put('/courses/:id',
  authenticateUser,
  [ titleValChain, descValChain ],
@@ -156,16 +159,15 @@ router.put('/courses/:id',
 
   }else{
    // let's check if current user owns the course before applying the changes
-
    // userId of the current user logged in
    const currUserId = currentUser[0].dataValues.id;
-   // get course by it's :id
+   // get the course by it's :id
    const course = await Course.findByPk(req.params.id);
     // if course exists...
     if(course) {
       // userId assosiated with course
       const courseUserId = course.dataValues.userId;
-      // compare the 2 userIds, if equal make the changes requeted
+      // compare the 2 userIds, if equal make the changes requested
       if(currUserId === courseUserId) {
         course.title = req.body.title;
         course.description = req.body.description;
@@ -181,19 +183,21 @@ router.put('/courses/:id',
 }));
 
 
-// DELETE request to '/api/courses/:id' to delete a single course
+// DELETE request to '/api/courses/:id' to delete a single course -
+// notice we authenticate the user
 router.delete('/courses/:id', authenticateUser, asyncHandler( async (req, res) => {
 
   // code to get and return the current user...
   const currentUser = req.currentUser;
   // userId of the current user logged in
   const currUserId = currentUser[0].dataValues.id;
-  // get course
+   // get the course by it's :id
   const course = await Course.findByPk(req.params.id);
   // if course exists...
   if(course) {
     // userId assosiated with course
     const courseUserId = course.dataValues.userId;
+    // compare the 2 userIds, if equal destroy the course
     if(currUserId === courseUserId) {
       course.destroy();
       res.status(204).end();

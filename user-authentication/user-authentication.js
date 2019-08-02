@@ -1,10 +1,16 @@
+/*
+
+This is a module that contains only a function that checks for user authentication.
+The authenticateUser func is exported and used in relevant routes in routes.js
+
+*/
+
 const User = require('../models').User; // require User model
 const bcryptjs = require('bcryptjs'); // library that hashes passwords
 const auth = require('basic-auth'); // library that  parses user's credentials from Authorization Header
 
-// func that checks for user authentication
+// THE FUNCTION...
 const authenticateUser = async (req, res, next) => {
-
   let message = null;
   // Parse the user's credentials from the Authorization Header.
   const credentials = await auth(req);

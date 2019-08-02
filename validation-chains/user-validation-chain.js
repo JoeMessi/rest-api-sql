@@ -1,5 +1,9 @@
-// validation chains for the properties of the User module
-// which will be imported in 'routes.js' and used in the relevant route middlewares
+/*
+
+This is a module that contains only validation chains for the User's properties.
+The chains are exported and used in relevant routes in routes.js
+
+*/
 
 // importing User model
 const User = require('../models').User;
@@ -25,6 +29,7 @@ const emailValChain = check('emailAddress')
   .withMessage('emailAddress required')
   .isEmail()
   .withMessage('emailAddress has to be a valid email')
+  // the custom method checks if the email provided already exists in our database
   .custom(async (value, {req}) => {
     const sameEmailUser = await User.findAll({where: {emailAddress: value }});
     if(sameEmailUser.length !== 0) {
