@@ -27,6 +27,7 @@ const lastNameValChain = check('lastName')
 const emailValChain = check('emailAddress')
   .exists({ checkNull: true, checkFalsy: true })
   .withMessage('emailAddress required')
+  .if((value, { req }) => req.body.emailAddress) // if a value is provided continue validating, otherwise break the validation
   .isEmail()
   .withMessage('emailAddress has to be a valid email')
   // the custom method checks if the email provided already exists in our database
