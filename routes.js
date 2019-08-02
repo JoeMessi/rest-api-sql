@@ -76,10 +76,12 @@ router.post('/users', [
 // GET request to '/api/courses' that returns a list of courses including the user that owns each course
 router.get('/courses', asyncHandler( async (req, res) => {
   const courses = await Course.findAll({
+    attributes: { exclude: ['createdAt', 'updatedAt'] },
     include: [
       {
         model: User,
         as: 'student',
+        attributes: { exclude: ['password', 'createdAt', 'updatedAt'] },
       }
     ]
   });
@@ -90,6 +92,7 @@ router.get('/courses', asyncHandler( async (req, res) => {
 // GET request to '/api/courses/:id' that returns a single course, including the user that owns the course
 router.get('/courses/:id', asyncHandler( async (req, res) => {
   const course = await Course.findAll({
+    attributes: { exclude: ['createdAt', 'updatedAt'] },
     where: {
       id: req.params.id
     },
@@ -97,6 +100,7 @@ router.get('/courses/:id', asyncHandler( async (req, res) => {
       {
         model: User,
         as: 'student',
+        attributes: { exclude: ['password', 'createdAt', 'updatedAt'] },
       }
     ]
   });
@@ -126,8 +130,8 @@ router.post('/courses',
     res.status(400).json({ errors: errorMessages });
   }else{
     const course = await Course.create(req.body);
-      // sets the Location header to the URI for the course
-    res.location('/').status(201).end();
+      // sets the Location header to the URI for the new course
+    res.location(`/courses/${course.id}`).status(201).end();
   }
 
 }));
@@ -151,20 +155,25 @@ router.put('/courses/:id',
     res.status(400).json({ errors: errorMessages });
 
   }else{
+   // let's check if current user owns the course before applying the changes
 
-   // check if user owns that course
-   console.log(currentUser[0].dataValues.id);
-   const userLoggedIn = await User.findByPk(currentUser[0].dataValues.id);
-   console.log(userLoggedIn.student);
-
-    // get course by it's :id
-    const course = await Course.findByPk(req.params.id);
-
+   // userId of the current user logged in
+   const currUserId = currentUser[0].dataValues.id;
+   // get course by it's :id
+   const course = await Course.findByPk(req.params.id);
+    // if course exists...
     if(course) {
-      course.title = req.body.title;
-      course.description = req.body.description;
-      await course.save();
-      res.status(204).end();
+      // userId assosiated with course
+      const courseUserId = course.dataValues.userId;
+      // compare the 2 userIds, if equal make the changes requeted
+      if(currUserId === courseUserId) {
+        course.title = req.body.title;
+        course.description = req.body.description;
+        await course.save();
+        res.status(204).end();
+      }else{
+        res.status(403).json({message: "I'm afraid you don't own this course."});
+      }
     }else{
       res.status(404).json({message: "Course not found!"});
     }
@@ -174,13 +183,26 @@ router.put('/courses/:id',
 
 // DELETE request to '/api/courses/:id' to delete a single course
 router.delete('/courses/:id', authenticateUser, asyncHandler( async (req, res) => {
-  // throw new Error('noooooo')
-  const course = await Course.destroy({
-    where: {
-      id: req.params.id
+
+  // code to get and return the current user...
+  const currentUser = req.currentUser;
+  // userId of the current user logged in
+  const currUserId = currentUser[0].dataValues.id;
+  // get course
+  const course = await Course.findByPk(req.params.id);
+  // if course exists...
+  if(course) {
+    // userId assosiated with course
+    const courseUserId = course.dataValues.userId;
+    if(currUserId === courseUserId) {
+      course.destroy();
+      res.status(204).end();
+    }else{
+      res.status(403).json({message: "I'm afraid you don't own this course."});
     }
-  })
-  res.status(204).end();
+  }else{
+    res.status(404).json({message: "Course not found!"});
+  }
 }));
 
 // DELETE request to '/api/users/:id' to delete a single user
