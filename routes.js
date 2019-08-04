@@ -30,18 +30,27 @@ const {
 } = require('./validation-chains/course-validation-chain');
 
 
-// GET request to 'api/users' that returns all users - We also authenticate the user
+// GET request to 'api/users' that returns the currently authenticated user
 router.get('/users', authenticateUser, asyncHandler( async (req, res) => {
+  // code to get and return the current user...
+  const currentUser = req.currentUser;
+  // Id of current user
+  const currentUserId = currentUser[0].dataValues.id;
 
-  const users = await User.findAll({
+  const user = await User.findAll({
+    where: {
+      id: currentUserId
+    },
+    attributes: { exclude: ['password', 'createdAt', 'updatedAt'] },
     include: [
       {
         model: Course,
         as: 'student',
+        attributes: { exclude: ['createdAt', 'updatedAt'] },
       },
     ]
   });
-  res.status(200).json(users);
+  res.status(200).json(user);
 }));
 
 
